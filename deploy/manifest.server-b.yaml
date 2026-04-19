@@ -1,0 +1,12 @@
+# Agent manifest for server B (144.31.136.4). Deploy to
+# /etc/bots-dashboard-agent/manifest.yaml on server B.
+
+agent_id: server-b
+
+adapters:
+  - key: rebot
+    class: agent.adapters.rebot.RebotAdapter
+    working_dir: /opt/rebot/current
+    db_path: /opt/rebot/current/bot.sqlite3
+    bot_unit: rebot-bot.service
+    crawler_unit: rebot-crawler.service

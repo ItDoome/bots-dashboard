@@ -1,0 +1,1 @@
+"""Central dashboard FastAPI application."""

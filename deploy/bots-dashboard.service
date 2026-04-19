@@ -1,0 +1,56 @@
+[Unit]
+Description=bots-dashboard central (doomedash.com backend)
+Documentation=https://doomedash.com
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botsdash
+Group=botsdash
+WorkingDirectory=/opt/bots-dashboard
+EnvironmentFile=-/etc/bots-dashboard/env
+
+# CRITICAL INVARIANT: single worker only. The per-action asyncio.Lock and
+# the in-memory overview cache both assume one process. Setting --workers N
+# will silently break action mutex and let double-clicks run in parallel.
+ExecStart=/opt/bots-dashboard/.venv/bin/uvicorn \
+    app.main:app \
+    --host 127.0.0.1 \
+    --port 8090 \
+    --workers 1 \
+    --proxy-headers \
+    --forwarded-allow-ips=127.0.0.1 \
+    --log-level info
+
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=15
+KillMode=mixed
+
+# Filesystem hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Writable paths
+ReadWritePaths=/var/lib/bots-dashboard
+ReadOnlyPaths=/etc/bots-dashboard
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bots-dashboard
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,35 @@
+# Agent manifest for server A (144.31.136.67). Tells the agent which
+# adapters to load and with what config.
+#
+# Deploy to /etc/bots-dashboard-agent/manifest.yaml on server A.
+
+agent_id: server-a
+
+adapters:
+  - key: lolz_bot
+    class: agent.adapters.lolz_bot.LolzBotAdapter
+    working_dir: /opt/tg_bot
+    systemd_unit: lolz-bot.service
+    state_files:
+      state_json: /opt/tg_bot/state.json
+      watcher: /opt/tg_bot/watcher_config.json
+      watcher_diag: /opt/tg_bot/watcher_diagnostics.json
+      loliland: /opt/tg_bot/loliland_accounts.json
+      monopoly: /opt/tg_bot/monopoly_snapshots.json
+
+  - key: loliland
+    class: agent.adapters.loliland.LolilandAdapter
+    working_dir: /opt/tg_bot
+    accounts_file: /opt/tg_bot/loliland_accounts.json
+    venv_python: /opt/tg_bot/.venv/bin/python
+    cli_module: watcher_system.loliland_cli
+    host_systemd_unit: lolz-bot.service
+
+  - key: valshop
+    class: agent.adapters.valshop.ValshopAdapter
+    working_dir: /opt/valorant-shop
+    db_path: /opt/valorant-shop/users.db
+    skins_cache: /opt/valorant-shop/skins_cache.json
+    daily_log: /opt/valorant-shop/daily.log
+    venv_python: /opt/valorant-shop/venv/bin/python
+    host_systemd_unit: lolz-bot.service

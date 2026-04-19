@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Restricted journalctl wrapper for the bots-dashboard agent.
+
+Installed at /usr/local/bin/botsdash-journalctl with mode 0755, owned by
+root:root, callable by user ``botsagent`` via NOPASSWD sudo.
+
+Rules:
+    - Unit MUST be in ALLOWED_UNITS
+    - Lines: integer in [1..MAX_LINES]
+    - Since: integer seconds in [0..MAX_SINCE] (max 7 days)
+    - Fixed format: ``--output=short-iso --no-pager``
+
+This helper exists because narrowly whitelisting ``journalctl -u <unit>`` via
+sudoers is fragile (arg matching doesn't handle flag ordering robustly).
+Instead the sudoers file just allows calling THIS helper; this helper does
+all the validation.
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+ALLOWED_UNITS = frozenset({
+    # server A
+    "lolz-bot.service",
+    "bots-dashboard.service",
+    "bots-dashboard-agent.service",
+    "bots-dashboard-tunnel.service",
+    "monopoly-report.service",
+    # server B
+    "rebot-bot.service",
+    "rebot-crawler.service",
+})
+
+MAX_LINES = 1000
+MAX_SINCE = 86400 * 7   # 7 days
+
+
+def fail(msg: str, code: int = 2) -> None:
+    sys.stderr.write(f"botsdash-journalctl: {msg}\n")
+    sys.exit(code)
+
+
+def main() -> None:
+    if len(sys.argv) != 4:
+        fail("usage: botsdash-journalctl <unit> <lines> <since_seconds>")
+
+    unit = sys.argv[1]
+    lines_str = sys.argv[2]
+    since_str = sys.argv[3]
+
+    if unit not in ALLOWED_UNITS:
+        fail(f"unit not allowed: {unit!r}")
+    if "/" in unit or ".." in unit:
+        fail("path traversal in unit name")
+
+    try:
+        lines = int(lines_str)
+        since = int(since_str)
+    except ValueError:
+        fail("lines and since must be integers")
+        return
+
+    if not (1 <= lines <= MAX_LINES):
+        fail(f"lines must be in [1..{MAX_LINES}]")
+    if not (0 <= since <= MAX_SINCE):
+        fail(f"since must be in [0..{MAX_SINCE}] seconds")
+
+    argv = [
+        "/bin/journalctl",
+        "-u", unit,
+        "-n", str(lines),
+        "--no-pager",
+        "--output=short-iso",
+    ]
+    if since > 0:
+        argv.extend(["--since", f"-{since}seconds"])
+
+    try:
+        os.execv(argv[0], argv)
+    except FileNotFoundError:
+        try:
+            argv[0] = "/usr/bin/journalctl"
+            os.execv(argv[0], argv)
+        except FileNotFoundError:
+            fail("journalctl binary not found")
+
+
+if __name__ == "__main__":
+    main()

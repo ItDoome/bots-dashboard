@@ -1,0 +1,58 @@
+[Unit]
+Description=SSH tunnel server-A -> server-B agent (127.0.0.1:18765 -> 144.31.136.4:8765)
+Documentation=https://doomedash.com
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botsdash
+Group=botsdash
+
+# CRITICAL: pinned host key, no password fallback, exit-on-forward-failure.
+# If we ever fall back to interactive password prompt or trust-on-first-use
+# we silently degrade security. All three "o=no" plus the known_hosts pin
+# keep this link honest.
+ExecStart=/usr/bin/ssh \
+    -NT \
+    -o BatchMode=yes \
+    -o StrictHostKeyChecking=yes \
+    -o UserKnownHostsFile=/etc/bots-dashboard/known_hosts \
+    -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=30 \
+    -o ServerAliveCountMax=3 \
+    -o PasswordAuthentication=no \
+    -o PubkeyAuthentication=yes \
+    -o PreferredAuthentications=publickey \
+    -o ConnectTimeout=10 \
+    -i /etc/bots-dashboard/tunnel_key \
+    -L 127.0.0.1:18765:127.0.0.1:8765 \
+    tunnel@144.31.136.4
+
+Restart=always
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+# Filesystem hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+ReadOnlyPaths=/etc/bots-dashboard
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bots-dashboard-tunnel
+
+[Install]
+WantedBy=multi-user.target

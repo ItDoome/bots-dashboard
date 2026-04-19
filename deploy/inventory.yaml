@@ -1,0 +1,36 @@
+# Static inventory of bots + hosts. Source of truth for the dashboard.
+#
+# Deploy to /etc/bots-dashboard/inventory.yaml on server A.
+# Adding a new bot: add a new entry under `bots:`, then update the
+# corresponding host's agent manifest and restart the agent + central.
+
+bots:
+  - slug: lolz-bot
+    display_name: LOLZ Valorant Resell
+    icon: bot
+    host: server-a
+    adapter_key: lolz_bot
+
+  - slug: loliland
+    display_name: Loliland Bonus Claimer
+    icon: coins
+    host: server-a
+    adapter_key: loliland
+
+  - slug: valshop
+    display_name: Valorant Shop
+    icon: swords
+    host: server-a
+    adapter_key: valshop
+
+  - slug: rebot
+    display_name: reBot ReManga
+    icon: gamepad-2
+    host: server-b
+    adapter_key: rebot
+
+hosts:
+  server-a:
+    url: http://127.0.0.1:8765
+  server-b:
+    url: http://127.0.0.1:18765

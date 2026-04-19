@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-feature-settings: "cv02", "cv03", "cv11";
+}
+
+.dotted-bg {
+  background-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.09) 1px, transparent 1px);
+  background-size: 16px 16px;
+}

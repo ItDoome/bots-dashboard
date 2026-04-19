@@ -1,0 +1,71 @@
+[Unit]
+Description=bots-dashboard agent (per-host bot adapter runner)
+Documentation=https://doomedash.com
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botsagent
+Group=botsagent
+WorkingDirectory=/opt/bots-dashboard
+EnvironmentFile=-/etc/bots-dashboard-agent/env
+
+# CRITICAL: single-instance only. Per-action asyncio locks are process-local;
+# a second worker would silently let double-clicks race. If you ever need
+# scale-out, switch to file-based or Redis locks first.
+ExecStart=/opt/bots-dashboard/.venv/bin/uvicorn \
+    agent.main:app \
+    --host 127.0.0.1 \
+    --port 8765 \
+    --workers 1 \
+    --log-level info
+
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=15
+KillMode=mixed
+
+# Agent runs unprivileged as botsagent, but it uses sudo NOPASSWD to call
+# the root-owned helper scripts (/usr/local/bin/botsdash-systemctl and
+# botsdash-journalctl). sudo needs:
+#   - the setuid bit on /usr/bin/sudo           (hence RestrictSUIDSGID=no)
+#   - CAP_SETUID / CAP_SETGID in the bounding set (so we do NOT clear it)
+#   - NoNewPrivileges=no so execve() can gain the setuid bit
+#
+# Security comes from two other layers:
+#   1. /etc/sudoers.d/botsagent whitelists ONLY the two helper scripts
+#   2. The helpers themselves whitelist verbs + unit names (see deploy/helpers/)
+NoNewPrivileges=no
+RestrictSUIDSGID=no
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+RestrictRealtime=yes
+
+# Writable paths — bot state files the agent is allowed to touch plus
+# its backup dir. Each path is prefixed with "-" so that missing paths
+# (e.g. /opt/rebot/current on server A, /opt/tg_bot on server B) are
+# silently ignored instead of failing the mount-namespace setup.
+ReadWritePaths=-/opt/tg_bot
+ReadWritePaths=-/opt/rebot/current
+ReadWritePaths=-/opt/valorant-shop
+ReadWritePaths=/var/backups/bots-dashboard-agent
+ReadOnlyPaths=/etc/bots-dashboard-agent
+
+# Environment
+Environment=AGENT_ENV_FILE=/etc/bots-dashboard-agent/env
+Environment=WEB_CONCURRENCY=1
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bots-dashboard-agent
+
+[Install]
+WantedBy=multi-user.target

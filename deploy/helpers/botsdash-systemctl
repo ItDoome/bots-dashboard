@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Restricted systemctl wrapper for the bots-dashboard agent.
+
+Installed at /usr/local/bin/botsdash-systemctl with mode 0755, owned by
+root:root, and callable by user ``botsagent`` via NOPASSWD sudo.
+
+Rules:
+    - ONLY verbs in ALLOWED_VERBS are permitted
+    - ONLY units in ALLOWED_UNITS are permitted
+    - NO extra arguments (no globbing, no multi-unit, no --env injection)
+    - Returns non-zero exit code on any violation
+
+This script is the *second* line of defense after sudoers. Even if sudoers
+accidentally allowed something extra, this helper would refuse it.
+
+Add new units by editing this file and redeploying. Changes require root.
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+# ──────────────────────────────────────────────────────────────────────
+# Whitelist
+# ──────────────────────────────────────────────────────────────────────
+
+ALLOWED_UNITS = frozenset({
+    # server A
+    "lolz-bot.service",
+    "bots-dashboard.service",
+    "bots-dashboard-agent.service",
+    "bots-dashboard-tunnel.service",
+    "monopoly-report.service",
+    "monopoly-report.timer",
+    # server B
+    "rebot-bot.service",
+    "rebot-crawler.service",
+})
+
+ALLOWED_VERBS = frozenset({
+    "status",
+    "is-active",
+    "is-failed",
+    "is-enabled",
+    "show",
+    "start",
+    "stop",
+    "restart",
+    "reload",
+})
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Execution
+# ──────────────────────────────────────────────────────────────────────
+
+
+def fail(msg: str, code: int = 2) -> None:
+    sys.stderr.write(f"botsdash-systemctl: {msg}\n")
+    sys.exit(code)
+
+
+def main() -> None:
+    if len(sys.argv) != 3:
+        fail("usage: botsdash-systemctl <verb> <unit>")
+
+    verb = sys.argv[1]
+    unit = sys.argv[2]
+
+    if verb not in ALLOWED_VERBS:
+        fail(f"verb not allowed: {verb!r}")
+    if unit not in ALLOWED_UNITS:
+        fail(f"unit not allowed: {unit!r}")
+    if "/" in unit or ".." in unit:
+        fail("path traversal in unit name")
+
+    # Replace current process with the real systemctl call.
+    argv = ["/bin/systemctl", verb, unit]
+    try:
+        os.execv("/bin/systemctl", argv)
+    except FileNotFoundError:
+        # Some distros use /usr/bin/systemctl instead
+        try:
+            os.execv("/usr/bin/systemctl", ["/usr/bin/systemctl", verb, unit])
+        except FileNotFoundError:
+            fail("systemctl binary not found")
+
+
+if __name__ == "__main__":
+    main()

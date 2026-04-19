@@ -1,0 +1,17 @@
+# /etc/sudoers.d/botsagent — validate with `visudo -cf` before dropping in.
+# Mode 0440, owned by root:root.
+#
+# This sudoers snippet grants the botsagent user NOPASSWD access to ONLY
+# the two root-owned helper scripts that live under /usr/local/bin.
+# Those helpers do all the real validation (unit whitelist, verb whitelist,
+# no extra args). Even if someone tampered with this file to allow more,
+# the helpers would still refuse unauthorized calls.
+#
+# We deliberately do NOT use sudoers argument matching (fragile / order
+# dependent). All validation lives in the helpers.
+
+Defaults:botsagent !requiretty
+Defaults:botsagent env_reset
+
+botsagent ALL=(root) NOPASSWD: /usr/local/bin/botsdash-systemctl
+botsagent ALL=(root) NOPASSWD: /usr/local/bin/botsdash-journalctl

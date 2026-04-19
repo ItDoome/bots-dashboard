@@ -1,0 +1,59 @@
+# ─── Python ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ─── Node / Vite ─────────────────────────────────────
+web/node_modules/
+web/dist/
+web/dist-tsc-node/
+web/.vite/
+*.tsbuildinfo
+
+# ─── Secrets / runtime data ──────────────────────────
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+cookies.json
+known_hosts
+tunnel_key
+tunnel_key.pub
+dashboard.sqlite3
+sessions.db
+
+# ─── Development scratch files ───────────────────────
+_tmp_*
+_tmp_*.py
+_tmp_*.json
+*.tmp
+*.bak
+
+# ─── Build + IDE ─────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+dist/
+build/
+
+# ─── Logs ────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Local deploy state ──────────────────────────────
+deploy/__pycache__/
