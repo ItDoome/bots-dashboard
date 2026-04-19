@@ -79,6 +79,10 @@ export interface ValshopData {
     };
     titles: { total: number; items: { uuid: string; name: string; text: string }[] };
   };
+  history?: {
+    date: string;
+    items: { name: string; tier: string; cost_vp: number; icon: string | null }[];
+  }[];
 }
 
 export interface MonopolyData {

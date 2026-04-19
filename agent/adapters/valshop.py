@@ -10,6 +10,7 @@ Actions: rebuild skins cache, run daily broadcast.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import sqlite3
 import time
@@ -64,11 +65,13 @@ class ValshopAdapter(BotAdapter):
         self.db_path = Path(adapter_config.get("db_path", self.working_dir / "users.db"))
         self.skins_cache_path = Path(adapter_config.get("skins_cache", self.working_dir / "skins_cache.json"))
         self.daily_log_path = Path(adapter_config.get("daily_log", self.working_dir / "daily.log"))
+        self.history_db_path = Path(adapter_config.get("history_db", self.working_dir / "shop_history.db"))
         self.venv_python = Path(adapter_config.get("venv_python", self.working_dir / "venv" / "bin" / "python"))
         self.host_systemd_unit = adapter_config.get("host_systemd_unit", "lolz-bot.service")
 
         self._cache_ts: float = 0.0
         self._cache: dict[str, Any] = {}
+        self._history_inited = False
 
     async def capabilities(self) -> AdapterCapabilities:
         descriptors = _actions()
@@ -90,6 +93,12 @@ class ValshopAdapter(BotAdapter):
         stats = await asyncio.to_thread(self._read_stats)
         # Fetch live shop snapshot (Riot API call, cached 2 min)
         snap = await self._get_snapshot()
+
+        if snap and snap.get("ok"):
+            await asyncio.to_thread(self._record_daily, snap)
+            history = await asyncio.to_thread(self._read_daily_history, 30)
+            if history:
+                snap["history"] = history
 
         users_count = stats.get("users")
         cache_age_sec = stats.get("cache_age_sec")
@@ -154,8 +163,7 @@ class ValshopAdapter(BotAdapter):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
-            import json as _json
-            snap = _json.loads(stdout.decode("utf-8", errors="replace"))
+            snap = json.loads(stdout.decode("utf-8", errors="replace"))
         except Exception as exc:
             logger.warning("valshop: snapshot subprocess failed: %r", exc)
             snap = {"ok": False, "error": str(exc)}
@@ -213,6 +221,74 @@ class ValshopAdapter(BotAdapter):
 
         self._cache = out
         self._cache_ts = now
+        return out
+
+    def _init_history_db(self) -> None:
+        if self._history_inited:
+            return
+        conn = sqlite3.connect(str(self.history_db_path), timeout=3)
+        try:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS daily_shop_history ("
+                "date TEXT PRIMARY KEY, "
+                "items_json TEXT NOT NULL, "
+                "recorded_at INTEGER NOT NULL)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        self._history_inited = True
+
+    def _record_daily(self, snap: dict) -> None:
+        items = ((snap or {}).get("daily") or {}).get("items") or []
+        if not items:
+            return
+        # Strip per-user fields so history stays account-agnostic.
+        trimmed = [
+            {"name": it.get("name"), "tier": it.get("tier"),
+             "cost_vp": it.get("cost_vp"), "icon": it.get("icon")}
+            for it in items
+        ]
+        today = time.strftime("%Y-%m-%d", time.gmtime())
+        try:
+            self._init_history_db()
+            conn = sqlite3.connect(str(self.history_db_path), timeout=3)
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO daily_shop_history(date, items_json, recorded_at) "
+                    "VALUES (?, ?, ?)",
+                    (today, json.dumps(trimmed, ensure_ascii=False), int(time.time())),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception as exc:
+            logger.warning("valshop: record daily history failed: %r", exc)
+
+    def _read_daily_history(self, limit: int = 30) -> list[dict]:
+        if not self.history_db_path.exists():
+            return []
+        try:
+            uri = f"file:{self.history_db_path}?mode=ro"
+            conn = sqlite3.connect(uri, uri=True, timeout=3)
+            try:
+                rows = conn.execute(
+                    "SELECT date, items_json FROM daily_shop_history "
+                    "ORDER BY date DESC LIMIT ?",
+                    (int(limit),),
+                ).fetchall()
+            finally:
+                conn.close()
+        except Exception as exc:
+            logger.warning("valshop: read daily history failed: %r", exc)
+            return []
+        out: list[dict] = []
+        for date, items_json in rows:
+            try:
+                items = json.loads(items_json)
+            except Exception:
+                items = []
+            out.append({"date": date, "items": items})
         return out
 
     async def run_action(self, key: str, params: dict[str, Any]) -> ActionResult:

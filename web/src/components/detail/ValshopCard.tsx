@@ -52,6 +52,7 @@ export function ValshopCard({ data }: Props) {
   const [showAll, setShowAll] = useState(false);
   const [collectionTab, setCollectionTab] = useState<CollectionTab>("cards");
   const [collectionExpanded, setCollectionExpanded] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   if (!data.ok) {
     return (
@@ -463,6 +464,93 @@ export function ValshopCard({ data }: Props) {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Daily Shop history ── */}
+      {data.history && data.history.length > 0 && (() => {
+        const today = new Date().toISOString().slice(0, 10);
+        const past = data.history.filter(h => h.date !== today);
+        if (past.length === 0) return null;
+        const initialLimit = 5;
+        const visible = historyExpanded ? past : past.slice(0, initialLimit);
+        const hasMore = past.length > initialLimit;
+        return (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>📅 История Daily Shop</CardTitle>
+                  <CardDescription>
+                    {past.length} {past.length === 1 ? "день" : past.length < 5 ? "дня" : "дней"} в записи
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {visible.map(day => (
+                  <div key={day.date}>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">
+                      {day.date}
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {day.items.map((skin, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-3 rounded-lg border border-ink-200 bg-white p-2"
+                        >
+                          {skin.icon ? (
+                            <img
+                              src={skin.icon}
+                              alt={skin.name}
+                              className="h-10 w-20 rounded object-contain bg-ink-900/5 flex-shrink-0"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="h-10 w-20 rounded bg-ink-100 flex-shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-ink-900 truncate">
+                              {skin.name}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {skin.tier && (
+                                <span
+                                  className={cn(
+                                    "inline-block rounded-full border px-1.5 py-0.5 text-[9px]",
+                                    TIER_COLORS[skin.tier] || "text-ink-500 border-ink-200 bg-ink-50",
+                                  )}
+                                >
+                                  {skin.tier}
+                                </span>
+                              )}
+                              <span className="text-xs text-amber-600 font-medium">
+                                {skin.cost_vp.toLocaleString()} VP
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {hasMore && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setHistoryExpanded(v => !v)}
+                  >
+                    {historyExpanded
+                      ? `Свернуть (показано ${past.length})`
+                      : `Показать все ${past.length} дней`}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* ── Featured Bundle ── */}
       {data.bundle && (
