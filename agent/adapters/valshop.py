@@ -51,6 +51,13 @@ def _actions() -> list[ActionDescriptor]:
             danger_level=DangerLevel.low,
             estimated_duration_sec=30,
         ),
+        ActionDescriptor(
+            key="seed_demo_history",
+            label="Посеять demo-историю Daily Shop",
+            description="Вставить 5 фейковых дней в shop_history.db — для проверки рендера карточки. Реальные ротации их перезапишут.",
+            danger_level=DangerLevel.low,
+            estimated_duration_sec=2,
+        ),
     ]
 
 
@@ -356,7 +363,73 @@ class ValshopAdapter(BotAdapter):
                 duration_sec=time.monotonic() - started,
             )
 
+        if key == "seed_demo_history":
+            try:
+                inserted = await asyncio.to_thread(self._seed_demo_history)
+            except Exception as exc:
+                return ActionResult(
+                    ok=False,
+                    error=f"{type(exc).__name__}: {exc}",
+                    duration_sec=time.monotonic() - started,
+                )
+            return ActionResult(
+                ok=True,
+                message=f"Посеяно {inserted} demo-дней в shop_history.db",
+                duration_sec=time.monotonic() - started,
+            )
+
         return ActionResult(ok=False, error=f"unknown action: {key}")
+
+    def _seed_demo_history(self) -> int:
+        """Insert 5 fake past days into shop_history.db for UI smoke-testing."""
+        demo_sets = [
+            [
+                {"name": "Prelude to Chaos Vandal", "tier": "Ultra", "cost_vp": 2975, "icon": None},
+                {"name": "Sovereign Phantom", "tier": "Exclusive", "cost_vp": 2175, "icon": None},
+                {"name": "Reaver Bulldog", "tier": "Deluxe", "cost_vp": 1275, "icon": None},
+                {"name": "Glitchpop Stinger", "tier": "Premium", "cost_vp": 1775, "icon": None},
+            ],
+            [
+                {"name": "Ion Operator", "tier": "Premium", "cost_vp": 1775, "icon": None},
+                {"name": "Oni Phantom", "tier": "Premium", "cost_vp": 1775, "icon": None},
+                {"name": "Kingdom Ghost", "tier": "Select", "cost_vp": 875, "icon": None},
+                {"name": "Spectrum Classic", "tier": "Ultra", "cost_vp": 2975, "icon": None},
+            ],
+            [
+                {"name": "Elderflame Vandal", "tier": "Ultra", "cost_vp": 2975, "icon": None},
+                {"name": "Prime Karambit", "tier": "Premium", "cost_vp": 3550, "icon": None},
+                {"name": "Soulstrife Sheriff", "tier": "Deluxe", "cost_vp": 1275, "icon": None},
+                {"name": "Aristocrat Shorty", "tier": "Select", "cost_vp": 875, "icon": None},
+            ],
+            [
+                {"name": "RGX 11z Pro Vandal", "tier": "Exclusive", "cost_vp": 2175, "icon": None},
+                {"name": "Nebula Spectre", "tier": "Deluxe", "cost_vp": 1275, "icon": None},
+                {"name": "Forsaken Marshal", "tier": "Premium", "cost_vp": 1775, "icon": None},
+                {"name": "Gaia's Vengeance Phantom", "tier": "Ultra", "cost_vp": 2975, "icon": None},
+            ],
+            [
+                {"name": "Recon Phantom", "tier": "Select", "cost_vp": 875, "icon": None},
+                {"name": "Sensation Stinger", "tier": "Deluxe", "cost_vp": 1275, "icon": None},
+                {"name": "Gravitational Uranium Neuroblaster", "tier": "Ultra", "cost_vp": 4350, "icon": None},
+                {"name": "Singularity Phantom", "tier": "Exclusive", "cost_vp": 2175, "icon": None},
+            ],
+        ]
+        self._init_history_db()
+        now = int(time.time())
+        conn = sqlite3.connect(str(self.history_db_path), timeout=3)
+        try:
+            for idx, items in enumerate(demo_sets, start=1):
+                day_ts = now - idx * 86400
+                date = time.strftime("%Y-%m-%d", time.gmtime(day_ts))
+                conn.execute(
+                    "INSERT OR REPLACE INTO daily_shop_history(date, items_json, recorded_at) "
+                    "VALUES (?, ?, ?)",
+                    (date, json.dumps(items, ensure_ascii=False), day_ts),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return len(demo_sets)
 
     async def _run_subprocess(self, argv: list[str], started: float, timeout: float, success_msg: str) -> ActionResult:
         try:
