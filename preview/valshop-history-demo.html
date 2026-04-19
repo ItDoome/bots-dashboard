@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Valorant Shop · History preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: {
+            50:"#fafaf9", 100:"#f4f4f3", 200:"#e7e7e6", 300:"#d1d1d0",
+            500:"#71716f", 700:"#3c3c3b", 900:"#111110", 950:"#0a0a09",
+          },
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body { background:#fafaf9; font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+</style>
+</head>
+<body class="min-h-screen p-3 sm:p-6">
+<div class="mx-auto max-w-3xl flex flex-col gap-4">
+
+  <div class="text-xs text-ink-500">
+    Статичное превью новой карточки <b>«История Daily Shop»</b>. Данные — фейковые.
+    На реальном сайте появится после деплоя ветки и первой ротации.
+  </div>
+
+  <!-- Wallet -->
+  <section class="rounded-2xl border border-ink-200 bg-white">
+    <header class="p-4 pb-0">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-ink-900">Кошелёк</h2>
+          <p class="text-xs text-ink-500">EU region</p>
+        </div>
+      </div>
+    </header>
+    <div class="p-4">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <div class="text-[11px] uppercase tracking-wider opacity-70">Valorant Points</div>
+          <div class="mt-1 flex items-baseline gap-1">
+            <span class="text-2xl font-semibold">1,234</span>
+            <span class="text-sm opacity-70">VP</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-900">
+          <div class="text-[11px] uppercase tracking-wider opacity-70">Radianite</div>
+          <div class="mt-1 flex items-baseline gap-1">
+            <span class="text-2xl font-semibold">87</span>
+            <span class="text-sm opacity-70">RP</span>
+          </div>
+        </div>
+        <div class="rounded-xl border border-violet-200 bg-violet-50 p-4 text-violet-900">
+          <div class="text-[11px] uppercase tracking-wider opacity-70">Kingdom Credits</div>
+          <div class="mt-1 flex items-baseline gap-1">
+            <span class="text-2xl font-semibold">15,400</span>
+            <span class="text-sm opacity-70">KC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Daily Shop (today) -->
+  <section class="rounded-2xl border border-ink-200 bg-white">
+    <header class="p-4 pb-0">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-ink-900">🎯 Daily Shop</h2>
+          <p class="text-xs text-ink-500">До обновления: 7ч 42м</p>
+        </div>
+        <span class="inline-flex items-center rounded-full bg-ink-900 text-white px-2 py-0.5 text-xs">4 скина</span>
+      </div>
+    </header>
+    <div class="p-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2" id="today-grid"></div>
+    </div>
+  </section>
+
+  <!-- History (the new card) -->
+  <section class="rounded-2xl border border-ink-200 bg-white">
+    <header class="p-4 pb-0">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-ink-900">📅 История Daily Shop</h2>
+          <p class="text-xs text-ink-500" id="hist-count"></p>
+        </div>
+      </div>
+    </header>
+    <div class="p-4">
+      <div id="hist-body" class="space-y-4"></div>
+      <div class="mt-4 flex justify-center">
+        <button id="toggle" class="inline-flex items-center rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-50 transition-colors">
+          Показать все
+        </button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const TIER = {
+  Select:    "text-sky-700 border-sky-200 bg-sky-50",
+  Deluxe:    "text-emerald-700 border-emerald-200 bg-emerald-50",
+  Premium:   "text-violet-700 border-violet-200 bg-violet-50",
+  Exclusive: "text-pink-700 border-pink-200 bg-pink-50",
+  Ultra:     "text-amber-700 border-amber-300 bg-amber-50",
+};
+
+const TODAY = [
+  { name: "Reaver Vandal",        tier: "Ultra",     cost_vp: 2975 },
+  { name: "Celestial Phantom",    tier: "Deluxe",    cost_vp: 1275 },
+  { name: "Sentinels of Light Operator", tier: "Premium", cost_vp: 1775 },
+  { name: "Kingdom Classic",      tier: "Select",    cost_vp: 875 },
+];
+
+const PAST = [
+  { date: "2025-04-18", items: [
+    { name: "Prelude to Chaos Vandal", tier: "Ultra", cost_vp: 2975 },
+    { name: "Sovereign Phantom",       tier: "Exclusive", cost_vp: 2175 },
+    { name: "Reaver Bulldog",          tier: "Deluxe", cost_vp: 1275 },
+    { name: "Glitchpop Stinger",       tier: "Premium", cost_vp: 1775 },
+  ]},
+  { date: "2025-04-17", items: [
+    { name: "Ion Operator",      tier: "Premium", cost_vp: 1775 },
+    { name: "Oni Phantom",       tier: "Premium", cost_vp: 1775 },
+    { name: "Kingdom Ghost",     tier: "Select",  cost_vp: 875 },
+    { name: "Spectrum Classic",  tier: "Ultra",   cost_vp: 2975 },
+  ]},
+  { date: "2025-04-16", items: [
+    { name: "Elderflame Vandal",    tier: "Ultra",   cost_vp: 2975 },
+    { name: "Prime Karambit",       tier: "Premium", cost_vp: 3550 },
+    { name: "Soulstrife Sheriff",   tier: "Deluxe",  cost_vp: 1275 },
+    { name: "Aristocrat Shorty",    tier: "Select",  cost_vp: 875 },
+  ]},
+  { date: "2025-04-15", items: [
+    { name: "RGX 11z Pro Vandal",       tier: "Exclusive", cost_vp: 2175 },
+    { name: "Nebula Spectre",           tier: "Deluxe",    cost_vp: 1275 },
+    { name: "Forsaken Marshal",         tier: "Premium",   cost_vp: 1775 },
+    { name: "Gaia's Vengeance Phantom", tier: "Ultra",     cost_vp: 2975 },
+  ]},
+  { date: "2025-04-14", items: [
+    { name: "Recon Phantom",                            tier: "Select",    cost_vp: 875 },
+    { name: "Sensation Stinger",                        tier: "Deluxe",    cost_vp: 1275 },
+    { name: "Gravitational Uranium Neuroblaster",       tier: "Ultra",     cost_vp: 4350 },
+    { name: "Singularity Phantom",                      tier: "Exclusive", cost_vp: 2175 },
+  ]},
+  { date: "2025-04-13", items: [
+    { name: "Endeavour Vandal",  tier: "Deluxe", cost_vp: 1275 },
+    { name: "Magepunk Classic",  tier: "Premium", cost_vp: 1775 },
+    { name: "BlastX Judge",      tier: "Deluxe", cost_vp: 1275 },
+    { name: "Champions Bulldog", tier: "Premium", cost_vp: 1775 },
+  ]},
+  { date: "2025-04-12", items: [
+    { name: "Radiant Crisis 001 Frenzy", tier: "Premium", cost_vp: 1775 },
+    { name: "Ruination Odin",            tier: "Ultra",   cost_vp: 2975 },
+    { name: "Minima Shorty",             tier: "Select",  cost_vp: 875 },
+    { name: "Prism II Marshal",          tier: "Premium", cost_vp: 1775 },
+  ]},
+];
+
+function skinTile(it, layout /* "daily" | "hist" */) {
+  const thumb = layout === "daily" ? "h-14 w-24" : "h-10 w-20";
+  return `
+    <div class="flex items-center gap-3 rounded-${layout==="daily"?"xl":"lg"} border border-ink-200 bg-white p-${layout==="daily"?"3":"2"}">
+      <div class="${thumb} rounded bg-ink-100 flex-shrink-0"></div>
+      <div class="min-w-0 flex-1">
+        <div class="${layout==="daily"?"font-medium text-sm":"text-sm font-medium"} text-ink-900 truncate">${it.name}</div>
+        <div class="flex items-center gap-2 mt-0.5">
+          <span class="inline-block rounded-full border px-${layout==="daily"?"2":"1.5"} py-0.5 text-[${layout==="daily"?"10":"9"}px] font-medium ${TIER[it.tier]||""}">${it.tier}</span>
+          <span class="text-${layout==="daily"?"sm":"xs"} font-${layout==="daily"?"semibold":"medium"} text-amber-600">${it.cost_vp.toLocaleString()} VP</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+document.getElementById("today-grid").innerHTML = TODAY.map(s => skinTile(s, "daily")).join("");
+
+const INITIAL = 5;
+let expanded = false;
+const body = document.getElementById("hist-body");
+const toggle = document.getElementById("toggle");
+const count = document.getElementById("hist-count");
+
+function pluralDays(n){
+  const r = n % 10, t = n % 100;
+  if (t >= 11 && t <= 14) return "дней";
+  if (r === 1) return "день";
+  if (r >= 2 && r <= 4) return "дня";
+  return "дней";
+}
+
+function render() {
+  const list = expanded ? PAST : PAST.slice(0, INITIAL);
+  count.textContent = `${PAST.length} ${pluralDays(PAST.length)} в записи`;
+  body.innerHTML = list.map(day => `
+    <div>
+      <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-500">${day.date}</div>
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        ${day.items.map(it => skinTile(it, "hist")).join("")}
+      </div>
+    </div>
+  `).join("");
+  toggle.textContent = expanded
+    ? `Свернуть (показано ${PAST.length})`
+    : `Показать все ${PAST.length} ${pluralDays(PAST.length)}`;
+  toggle.style.display = PAST.length > INITIAL ? "" : "none";
+}
+
+toggle.addEventListener("click", () => { expanded = !expanded; render(); });
+render();
+</script>
+</body>
+</html>
