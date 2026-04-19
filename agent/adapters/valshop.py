@@ -72,6 +72,10 @@ class ValshopAdapter(BotAdapter):
         self._cache_ts: float = 0.0
         self._cache: dict[str, Any] = {}
         self._history_inited = False
+        # Run history recorder once per hour — catches the UTC daily rotation
+        # within an hour even if no one opens the dashboard.
+        self._history_interval_sec = int(adapter_config.get("history_interval_sec", 3600))
+        self._history_task: asyncio.Task | None = None
 
     async def capabilities(self) -> AdapterCapabilities:
         descriptors = _actions()
@@ -290,6 +294,43 @@ class ValshopAdapter(BotAdapter):
                 items = []
             out.append({"date": date, "items": items})
         return out
+
+    async def start_background(self) -> None:
+        if self._history_task is None or self._history_task.done():
+            self._history_task = asyncio.create_task(self._history_loop())
+
+    async def stop_background(self) -> None:
+        task = self._history_task
+        if task is None or task.done():
+            return
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+        self._history_task = None
+
+    async def _history_loop(self) -> None:
+        """Periodically pull a fresh snapshot and persist today's Daily Shop."""
+        # Small delay so startup isn't slowed by a Riot API call.
+        await asyncio.sleep(60)
+        while True:
+            try:
+                # Invalidate the 2-min snapshot cache so we definitely get
+                # fresh data after a daily rotation.
+                if hasattr(self, "_snap_ts"):
+                    self._snap_ts = 0.0
+                snap = await self._get_snapshot()
+                if snap and snap.get("ok"):
+                    await asyncio.to_thread(self._record_daily, snap)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.warning("valshop: history loop iteration failed: %r", exc)
+            try:
+                await asyncio.sleep(self._history_interval_sec)
+            except asyncio.CancelledError:
+                raise
 
     async def run_action(self, key: str, params: dict[str, Any]) -> ActionResult:
         started = time.monotonic()

@@ -97,7 +97,19 @@ async def lifespan(app: FastAPI):
     _adapters = manifest.load_manifest()
     logger.info("loaded %d adapters: %s", len(_adapters), list(_adapters.keys()))
 
+    for slug, adapter in _adapters.items():
+        try:
+            await adapter.start_background()
+        except Exception:
+            logger.exception("start_background(%s) failed", slug)
+
     yield
+
+    for slug, adapter in _adapters.items():
+        try:
+            await adapter.stop_background()
+        except Exception:
+            logger.exception("stop_background(%s) failed", slug)
 
     logger.info("agent shutdown")
 

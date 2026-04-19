@@ -66,3 +66,15 @@ class BotAdapter(ABC):
     async def run_action(self, key: str, params: dict[str, Any]) -> ActionResult:
         """Execute an action by key. Default: raise — override in subclass."""
         raise NotImplementedError(f"{self.slug} has no action {key!r}")
+
+    # ──────────────────────────────────────────────────────────────
+    # Background tasks — optional long-running loops
+    # ──────────────────────────────────────────────────────────────
+
+    async def start_background(self) -> None:
+        """Spawn any long-running tasks. Called once at agent startup."""
+        return None
+
+    async def stop_background(self) -> None:
+        """Cancel long-running tasks. Called at agent shutdown."""
+        return None
