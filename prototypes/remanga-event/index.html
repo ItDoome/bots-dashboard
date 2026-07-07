@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Зимние истории — ивент | ReМанга</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Шапка в стиле ReManga (мок) -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="#" onclick="App.go('hub');return false;">Re<span>Манга</span></a>
+      <nav class="site-nav">
+        <a href="#" onclick="return false;">Каталог</a>
+        <a href="#" onclick="return false;">Топы</a>
+        <a href="#" onclick="return false;">Новое</a>
+        <a href="#" class="active" onclick="App.go('hub');return false;">Ивент</a>
+      </nav>
+      <div class="header-search"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg><span>Поиск…</span></div>
+      <div class="header-right">
+        <div class="avatar" title="Профиль">D</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Корневой контейнер приложения -->
+  <main id="app"></main>
+
+  <!-- Слои поверх: поп-апы, кат-сцены, тосты -->
+  <div id="modals"></div>
+  <div id="toasts"></div>
+
+  <!-- Dev-панель для демонстрации -->
+  <button id="dev-toggle" title="Dev-панель (для демо)" onclick="App.toggleDev()">⚙</button>
+  <div id="dev-panel" class="hidden">
+    <div class="dev-title">Демо-панель</div>
+    <button onclick="App.devNextDay()">+1 день ивента</button>
+    <button onclick="App.devGrant()">+5 🗝 +100 💜 +100 💎</button>
+    <button onclick="App.devReset()">Сбросить прогресс</button>
+    <div class="dev-note">Панель нужна только для демонстрации механик.</div>
+  </div>
+
+  <script src="js/assets.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
